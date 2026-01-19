@@ -1,0 +1,400 @@
+---
+title: "Duke_2026_demo_report"
+author: "Type your name"
+date: "2026-01-17"
+output_file: "index.html"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 4
+    theme: paper
+    code_folding: show
+    # code_folding: hide
+    code_download: no
+    self_contained: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+  pdf_document:
+    toc: yes
+    number_sections: yes
+subtitle: Test your knowledge
+documentclass: report
+geometry: margin=1in
+---
+    
+## Goals
+1. Give you a sense for what is possible with `R Markdown`
+2. Show you the basic components so you can publish your work online
+3. Build something, make mistakes, and iterate
+
+**In the longer term**: Use this file and tutorial as a starting point, then go to YouTube, Google or your preferred AI to keep going. Ideally, you'll be able to articulate what you want a little better after this tutorial.
+
+**Remember:** Almost nothing works well the first time. It just needs to work well enough for you to learn something and prove a concept. This tutorial is meant to be rough and ready &trade;. It's okay if you're unsure about some part of the process. Getting comfortable will take time.
+
+
+## Components of an R based report
+
+### An R Markdown file (.Rmd) 
+  * i.e. this file that 
+  * Contains all the pieces we need and will be render into our outputs
+  * **make a new .RmD file in R studio -> 'click' `file` -> `new file` -> `R Markdown`**
+  
+### Outputs (what you publish/share)
+  * PDF
+  * Word
+  * HTML (website)
+  * Graphs (PNG/JPG)
+    
+### Publishing (if we have time)
+  * Github Pages
+  * DukeSites
+  * Free forever, and relatively easy to use!
+  * [Publishing your work in github pages](https://docs.github.com/en/pages)
+    
+    
+## The Anatomy of an R Markdown File 
+2. YAML
+    * lives at the top of the Rmd file
+    * sets the outputs for making PDFs, HTML, Word docs, etc
+    * Ideally, set up a template or example that has all the options you like and just copy/paste when you want to use it
+  
+2. Markdown code
+    * All of your text is written in markdown
+        * Make headers by using a hashtag symbol in front of the text
+        * More hashtags translates into a smaller header size (# H1, ## H2, ### H3)
+        * Using headers correctly will make it easy to create tables of contents (see Table of contents for example)
+    * Download the [Cheatsheet](https://github.com/rstudio/cheatsheets/raw/main/rmarkdown-2.0.pdf)
+    * See RMarkdown documentation for help in the future: https://rmarkdown.rstudio.com/lesson-1.html
+    
+3. Code Chunks
+    * Where all the code lives! 
+    * Used to work with
+        * data    
+        * calculations
+        * graphs and data viz
+        
+        
+## Coding in R
+<!-- Basic stats. Frequency, regression, data cleaning, basic visualization -->
+### Setup your workspace
+Although R has a lot of built-in functionality, we almost always import a separate `library` to add certain features. Which library you use will depend on what you're trying to do. Ask Google or an LLM for help figuring out what you need. 
+```{r setup, warning=FALSE, message=FALSE}
+
+# Install packages to work with, they help you do things that R doesn't have built-in by default
+# install.packages("dplyr") <- this is a code comment, it doesn't run, it's for your reference
+
+# helps with data manipulation
+library(dplyr)
+
+#helps with plotting
+library(ggplot2)
+
+# also helps with data manipulation
+library(tidyverse)
+
+# work with CSV data
+library(readr)
+
+```
+
+### Loading data
+```{r loading}
+food_security_df <- read.csv('data/raw_data/FAOSTAT_data_en_1-19-2026.csv')
+
+```
+
+
+### Data cleanup/setup
+```{r}
+# Remove the columns we don't want
+food_security_df_modified <- food_security_df %>% 
+  select(-Domain) %>% 
+  select(-Element)
+
+# Removing rows with NA values
+food_security_df_modified <- food_security_df_modified[!is.na(food_security_df_modified$Value) & food_security_df_modified$Value != "", ]
+
+```
+
+### Summary stats
+```{r}
+# Let's grab only one indicator for now
+df_filtered_stability <- food_security_df_modified %>%
+  filter(Item == "Political stability and absence of violence/terrorism (index)")
+
+
+summary(df_filtered_stability$Value)
+
+# right now, our values are being treated like text (strings), we need to make them numeric
+# the R needs to be told what kind of values it's working with
+df_filtered_stability$value_num <- as.numeric(df_filtered_stability$Value)
+df_filtered_stability$Year <- as.numeric(df_filtered_stability$Year)
+
+
+summary(df_filtered_stability$value_num)
+
+
+```
+
+
+### Basic Graphs
+```{r}
+
+ggplot(df_filtered_stability, aes(x = Year, y = value_num)) +
+  geom_line() +
+  geom_point() +
+  scale_x_continuous(breaks = c(2021, 2022)) +
+  labs(
+    x = "Year",
+    y = "Political stability index",
+    title = "Political Stability, 2021–2022"
+  ) +
+  theme_minimal()
+
+```
+```{r}
+#Simple box plot
+ggplot(df_filtered_stability, aes(x = factor(Year), y = value_num)) +
+  geom_boxplot() +
+  labs(
+    x = "Year",
+    y = "Political stability index",
+    title = "Political Stability by Year"
+  ) +
+  theme_minimal()
+
+
+#Pretty box plot
+ggplot(df_filtered_stability, aes(x = factor(Year), y = value_num, fill = factor(Year))) +
+  geom_boxplot(
+    width = 0.6,
+    alpha = 0.8,
+    outlier.shape = NA
+  ) +
+  geom_jitter(
+    width = 0.15,
+    alpha = 0.35,
+    size = 1.5
+  ) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    x = "Year",
+    y = "Political stability index",
+    title = "Political Stability and Absence of Violence/Terrorism",
+    subtitle = "Distribution by year"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(face = "bold"),
+    axis.title = element_text(face = "bold")
+  )
+
+# Violing plot
+
+temp_plot <- ggplot(df_filtered_stability, aes(x = factor(Year), y = value_num, fill = factor(Year))) +
+  geom_violin(
+    trim = FALSE,
+    alpha = 0.8
+  ) +
+  geom_boxplot(
+    width = 0.12,
+    fill = "white",
+    outlier.shape = NA
+  ) +
+  geom_jitter(
+    width = 0.1,
+    alpha = 0.3,
+    size = 1.3
+  ) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    x = "Year",
+    y = "Political stability index",
+    title = "Political Stability and Absence of Violence/Terrorism",
+    subtitle = "Distribution by year"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(face = "bold"),
+    axis.title = element_text(face = "bold")
+  )
+
+
+# Saving the plots as images
+ggsave(
+  filename = "political_stability_violin_2021_2022_2.png",
+  plot = temp_plot,
+  width = 8,
+  height = 6,
+  dpi = 300
+)
+
+```
+
+### Regressions
+Let's investigate the relationship between political stability and GDP
+```{r}
+# lets see how stability and GDP compare
+reg_df <- food_security_df_modified %>% 
+  filter(
+    Item == "Political stability and absence of violence/terrorism (index)" 
+    |Item == "Gross domestic product per capita, PPP, (constant 2021 international $)"
+    ) 
+
+
+reg_df_years <- reg_df %>% 
+  filter(
+    Year == 2021 | Year == 2022
+  )
+
+# Reshaping the data so we can run the regressions. Right now it's long, we need it wide (i.e. we're going to pivot the table)
+df_wide <- reg_df_years %>%
+  filter(Item %in% c(
+    "Gross domestic product per capita, PPP, (constant 2021 international $)",
+    "Political stability and absence of violence/terrorism (index)"
+  )) %>%
+  #making sure our values are treated as numbers
+  mutate(
+    Value = as.numeric(Value),     # if Value is character
+    Year  = as.integer(Year)
+  ) %>%
+  #pivoting the table
+  select(Area, Year, Item, Value) %>%
+  pivot_wider(
+    names_from = Item,
+    values_from = Value
+  ) %>%
+  # renaming columns for ease of use
+  rename(
+    gdp = `Gross domestic product per capita, PPP, (constant 2021 international $)`,
+    pol_stab   = `Political stability and absence of violence/terrorism (index)`
+  ) %>%
+  # getting rid of any blank values is good practice
+  drop_na(gdp, pol_stab)
+
+```
+#### Running the regression
+```{r}
+#running the regression
+
+# Raw GDP
+m1 <- lm(gdp ~ pol_stab, data = df_wide)
+summary(m1)
+
+# Log GDP, since it tends to be sweked right 
+m2 <- lm(log(gdp) ~pol_stab, data= df_wide)
+summary(m2)
+
+# With time fixed effects
+m3 <- lm(log(gdp) ~ pol_stab + factor(Year), data = df_wide)
+summary(m3)
+
+# Controlling for area
+m4 <- lm(log(gdp) ~ pol_stab + factor(Area) + factor(Year), data = df_wide)
+summary(m4)
+
+
+```
+#### Graphing Regression results
+```{r}
+
+ggplot(df_wide, aes(x = pol_stab, y = log(gdp))) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm", se = TRUE) +
+  theme_minimal() +
+  labs(
+    x = "Political stability and absence of violence/terrorism (index)",
+    y = "log(GDP per capita, PPP)",
+    title = "GDP and Political Stability"
+  )
+
+```
+
+#### Nice regression tables
+```{r}
+library(broom)
+library(gt)
+
+tidy(m1) %>%
+  gt() %>%
+  fmt_number(columns = c(estimate, std.error), decimals = 3) %>%
+  tab_header(
+    title = "Regression results",
+    subtitle = "Dependent variable: log(GDP per capita)"
+  )
+
+
+# Making things nicer, rounding vals
+tidy(m1) %>%
+  mutate(
+    estimate  = round(estimate, 3),
+    std.error = round(std.error, 3),
+    statistic = round(statistic, 2),
+    p.value   = round(p.value, 3)
+  ) %>% 
+  gt() %>%
+  fmt_number(columns = c(estimate, std.error), decimals = 3) %>%
+  tab_header(
+    title = "Regression results",
+    subtitle = "Dependent variable: log(GDP per capita)"
+  )
+```
+
+    
+## For Future Reference 
+
+### Keyboard Shortcuts
+* Make a new code chunk (Command + Option + I)
+* Assign a new variable (Option + Dash)
+
+### Code Chunk Options
+
+| Chunk option | What it controls | Why it matters in reports | Plain-language explanation |
+|-------------|------------------|----------------------------|-----------------------------|
+| `echo` | Whether the R code is shown | Separates analysis from presentation | Show or hide the code |
+| `eval` | Whether the code is executed | Lets you display example code without running it | Run this code or not |
+| `message` | Package and function messages | Keeps output clean and professional | Hide messages like “Attaching package…” |
+| `warning` | Warning messages | Prevents confusing output for readers | Show or hide warnings |
+| `include` | Whether code *and* results appear | Allows silent background computation | Run this but don’t show anything |
+| `results` | How printed output is treated | Required for tables and formatted text | Control how output is displayed |
+| `fig.width` / `fig.height` | Figure size (in inches) | Ensures readable, publication-ready figures | Control plot size |
+| `fig.cap` | Figure caption text | Enables figure numbering and captions | Text shown under the figure |
+| `cache` | Whether results are saved | Speeds up slow reports | Don’t re-run unless code changes |
+| `error` | Behavior when errors occur | Useful for teaching and debugging | Keep knitting even if this fails |
+
+```{r, eval = FALSE}
+lm(y ~ x, data = df)
+
+
+```{r}
+
+```
+
+
+```{r include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
