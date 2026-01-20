@@ -1,13 +1,12 @@
 ---
-title: "Duke_2026_demo_report"
+title: "Learning to build reports using R"
 author: "Type your name"
-date: "2026-01-17"
-output_file: "index.html"
+date: "January 23, 2026"
 output:
   html_document:
     toc: yes
     toc_depth: 4
-    theme: paper
+    theme: bootstrap
     code_folding: show
     # code_folding: hide
     code_download: no
@@ -35,8 +34,7 @@ geometry: margin=1in
 
 ## Components of an R based report
 
-### An R Markdown file (.Rmd) 
-  * i.e. this file that 
+### R Markdown file (.Rmd) 
   * Contains all the pieces we need and will be render into our outputs
   * **make a new .RmD file in R studio -> 'click' `file` -> `new file` -> `R Markdown`**
   
@@ -126,6 +124,14 @@ df_filtered_stability <- food_security_df_modified %>%
 
 summary(df_filtered_stability$Value)
 
+
+
+
+```
+
+It looks like our values are being treated like text (strings). We need to make them numeric. R needs to be told what kind of values it's working with so we can get summary statistics. 
+
+```{r}
 # right now, our values are being treated like text (strings), we need to make them numeric
 # the R needs to be told what kind of values it's working with
 df_filtered_stability$value_num <- as.numeric(df_filtered_stability$Value)
@@ -133,8 +139,6 @@ df_filtered_stability$Year <- as.numeric(df_filtered_stability$Year)
 
 
 summary(df_filtered_stability$value_num)
-
-
 ```
 
 
@@ -222,8 +226,10 @@ temp_plot <- ggplot(df_filtered_stability, aes(x = factor(Year), y = value_num, 
     axis.title = element_text(face = "bold")
   )
 
-
-# Saving the plots as images
+```
+#### Saving plots as images
+```{r}
+#Saving the plots as images
 ggsave(
   filename = "political_stability_violin_2021_2022_2.png",
   plot = temp_plot,
@@ -277,6 +283,8 @@ df_wide <- reg_df_years %>%
 
 ```
 #### Running the regression
+
+##### Raw GPD
 ```{r}
 #running the regression
 
@@ -284,20 +292,32 @@ df_wide <- reg_df_years %>%
 m1 <- lm(gdp ~ pol_stab, data = df_wide)
 summary(m1)
 
+```
+##### Log GDP, since GDP tends to skew right
+```{r}
 # Log GDP, since it tends to be sweked right 
 m2 <- lm(log(gdp) ~pol_stab, data= df_wide)
 summary(m2)
+
+```
+
+##### Time Fixed Effects
+```{r}
 
 # With time fixed effects
 m3 <- lm(log(gdp) ~ pol_stab + factor(Year), data = df_wide)
 summary(m3)
 
+```
+
+##### Controlling for Area
+```{r eval=FALSE}
 # Controlling for area
 m4 <- lm(log(gdp) ~ pol_stab + factor(Area) + factor(Year), data = df_wide)
 summary(m4)
-
-
 ```
+
+
 #### Graphing Regression results
 ```{r}
 
@@ -323,12 +343,12 @@ tidy(m1) %>%
   fmt_number(columns = c(estimate, std.error), decimals = 3) %>%
   tab_header(
     title = "Regression results",
-    subtitle = "Dependent variable: log(GDP per capita)"
+    subtitle = "Dependent variable: GDP per capita"
   )
 
 
 # Making things nicer, rounding vals
-tidy(m1) %>%
+tidy(m2) %>%
   mutate(
     estimate  = round(estimate, 3),
     std.error = round(std.error, 3),
@@ -336,7 +356,7 @@ tidy(m1) %>%
     p.value   = round(p.value, 3)
   ) %>% 
   gt() %>%
-  fmt_number(columns = c(estimate, std.error), decimals = 3) %>%
+  fmt_number(columns = c(estimate, std.error), decimals = 2) %>%
   tab_header(
     title = "Regression results",
     subtitle = "Dependent variable: log(GDP per capita)"
@@ -388,13 +408,3 @@ When you click the **Knit** button a document will be generated that includes bo
 ```{r cars}
 summary(cars)
 ```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
